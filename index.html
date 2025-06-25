@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>박민수는 고인물</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500&family=Gowun+Dodum&display=swap');
+
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Gowun Dodum',sans-serif;background:#eef1f6;color:#333;padding:40px 20px}
+
+    header h1{font-family:'Orbitron',sans-serif;font-size:3rem;text-align:center;color:#006cff;margin-bottom:6px}
+    header p{text-align:center;color:#566;}
+    .profile-desc{text-align:center;font-size:.95rem;color:#677;line-height:1.6;margin:40px 0}
+
+    section{max-width:500px;margin:0 auto;background:#fff;border-radius:18px;padding:28px 24px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+    h2{text-align:center;font-size:1.6rem;color:#006cff;margin-bottom:8px}
+    .desc{text-align:center;font-size:.9rem;color:#556;margin-bottom:22px}
+
+    .drop-area{border:2px dashed #bbc;border-radius:12px;padding:36px;text-align:center;cursor:pointer;transition:.3s;background:#f7f9fb}
+    .drop-area.hover{background:#e4ecff;border-color:#006cff}
+    .drop-area svg{width:48px;height:48px;stroke:#889}
+    .drop-area p{margin-top:16px;color:#445;font-size:1rem}
+    input[type=file]{display:none}
+
+    #preview{max-width:320px;margin:24px auto;display:none;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.1)}
+
+    #progress-area{text-align:center;margin-top:20px;display:none}
+    .spinner{width:40px;height:40px;border:4px solid #c6d3ff;border-top-color:#006cff;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 10px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    #result{text-align:center;font-size:1.2rem;margin-top:18px;color:#222;display:none}
+    .bar{width:80%;height:20px;background:#e0e5ef;border-radius:10px;margin:14px auto 0;overflow:hidden;display:none}
+    .bar-fill{height:100%;width:0;background:linear-gradient(90deg,#00c9ff,#92fe9d);transition:width .6s ease}
+
+    #retry{display:none;margin:26px auto 0;background:#2b3556;color:#fff;padding:10px 22px;border:none;border-radius:30px;font-size:1rem;cursor:pointer}
+
+    footer{text-align:center;font-size:.8rem;color:#777;margin-top:50px}
+    footer strong{color:#006cff}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>박민수</h1>
+    <p>클래시로얄 5000 트로피의 고인물</p>
+  </header>
+  <p class="profile-desc">
+    박민수는 게임 실력, 잘생김, 유머감각, 친화력을 모두 갖춘 올라운더입니다.<br>
+    이제 AI가 당신이 그의 이상형에 얼마나 가까운지 알려드립니다!
+  </p>
+
+  <section>
+    <h2>당신은 민수의 이상형?</h2>
+    <p class="desc">얼굴 사진을 업로드하거나 박스 안을 클릭하세요.</p>
+
+    <label class="drop-area" id="drop-area">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+      <p>얼굴 사진을 올려놔<br>거나 눌러서 업로드!</p>
+      <input type="file" accept="image/*" id="file-input" />
+    </label>
+
+    <img id="preview" alt="preview" />
+
+    <div id="progress-area">
+      <div class="spinner"></div>
+      <p>AI가 당신의 얼굴을 분석중입니다.</p>
+    </div>
+    <div id="result"></div>
+    <div class="bar"><div class="bar-fill" id="bar-fill"></div></div>
+    <button id="retry">다른 사진으로 재시도</button>
+  </section>
+
+  <footer>
+    이 웹사이트는 인스타그램 <strong>@aya.ngg8</strong> 제작 · GitHub <strong>jebi0605</strong> Apache‑2.0 라이선스
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
+  <script>
+    const MODEL_URL = "https://teachablemachine.withgoogle.com/models/gx5sRVPXD/";
+    let model, ready = false;
+
+    async function loadModel() {
+      try {
+        const modelURL = MODEL_URL + "model.json";
+        const metadataURL = MODEL_URL + "metadata.json";
+        model = await tmImage.load(modelURL, metadataURL);
+        ready = true;
+      } catch (e) {
+        console.error("모델 로딩 실패", e);
+        alert("모델을 불러오지 못했습니다. URL이 유효한지 확인하거나 잠시 후 다시 시도해주세요.");
+      }
+    }
+    loadModel();
+
+    const dropArea = document.getElementById('drop-area');
+    const fileInput = document.getElementById('file-input');
+    const preview = document.getElementById('preview');
+    const progress = document.getElementById('progress-area');
+    const resultTxt = document.getElementById('result');
+    const bar = document.querySelector('.bar');
+    const barFill = document.getElementById('bar-fill');
+    const retryBtn = document.getElementById('retry');
+
+    dropArea.addEventListener('click', () => fileInput.click());
+    dropArea.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropArea.classList.add('hover');
+    });
+    dropArea.addEventListener('dragleave', () => dropArea.classList.remove('hover'));
+    dropArea.addEventListener('drop', e => {
+      e.preventDefault();
+      dropArea.classList.remove('hover');
+      handleFiles(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', e => handleFiles(e.target.files[0]));
+    retryBtn.addEventListener('click', resetUI);
+
+    function resetUI() {
+      preview.style.display = 'none';
+      resultTxt.style.display = 'none';
+      bar.style.display = 'none';
+      barFill.style.width = '0%';
+      dropArea.style.display = 'block';
+      progress.style.display = 'none';
+      retryBtn.style.display = 'none';
+    }
+
+    async function handleFiles(file) {
+      if (!file) return;
+
+      preview.src = URL.createObjectURL(file);
+      preview.style.display = 'block';
+      dropArea.style.display = 'none';
+      progress.style.display = 'block';
+      resultTxt.style.display = 'none';
+      bar.style.display = 'none';
+      retryBtn.style.display = 'none';
+
+      if (!ready) await loadModel();
+      if (!model) {
+        resultTxt.textContent = '모델이 아직 로드되지 않았습니다. 잠시 후 다시 시도해주세요.';
+        resultTxt.style.display = 'block';
+        progress.style.display = 'none';
+        retryBtn.style.display = 'block';
+        return;
+      }
+
+      await new Promise(res => preview.onload = res);
+      try {
+        const prediction = await model.predict(preview);
+        const ideal = prediction.find(p => /이상형/.test(p.className));
+        if (ideal) {
+          const percent = (ideal.probability * 100).toFixed(1);
+          resultTxt.innerHTML = `💘 민수의 이상형 적합도: <strong>${percent}%</strong>`;
+          barFill.style.width = `${percent}%`;
+          resultTxt.style.display = 'block';
+          bar.style.display = 'block';
+        } else {
+          resultTxt.textContent = '이상형 클래스를 찾을 수 없습니다.';
+          resultTxt.style.display = 'block';
+        }
+      } catch (err) {
+        console.error(err);
+        resultTxt.textContent = '예측 중 오류가 발생했습니다.';
+        resultTxt.style.display = 'block';
+      } finally {
+        progress.style.display = 'none';
+        retryBtn.style.display = 'block';
+      }
+    }
+  </script>
+</body>
+</html>
